@@ -1,0 +1,8 @@
+.gradle
+.classpath
+.project
+.settings
+bin
+build
+docker-ek-stack/elasticsearch01
+docker-ek-stack/elasticsearch02

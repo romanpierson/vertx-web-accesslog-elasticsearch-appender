@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Roman Pierson
+ * Copyright (c) 2016-2019 Roman Pierson
  * ------------------------------------------------------
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Apache License v2.0 
@@ -12,41 +12,116 @@
  */
 package com.mdac.vertx.web.accesslogger.appender.elasticsearch.impl;
 
-import java.io.PrintStream;
+import java.util.Collection;
 
 import com.mdac.vertx.web.accesslogger.appender.AppenderOptions;
 
 public class ElasticSearchAppenderOptions extends AppenderOptions {
 
-	private PrintStream printStream;
+	private String host;
+	private int port;
+	private IndexMode indexMode;
+	private String indexNameOrPattern;
+	private String type = "_doc";
+	private long indexScheduleInterval = 5000L;
 	
+	private Collection<String> fieldNames;
+	
+	public enum IndexMode{
+		
+		STATIC_NAME,
+		DATE_PATTERN
+		
+	}
+
 	public ElasticSearchAppenderOptions(){
+		
 		this.setAppenderImplementationClassName(ElasticSearchAppender.class.getName());
+		
 	}
 	
+	public ElasticSearchAppenderOptions setHost(final String host) {
+		
+		this.host = host;
+		
+		return this;
+		
+	}
 	
-	/**
-	 * dd
-	 *
-	 * @param printStream
-	 * 
-	 * @return a reference to this, so the API can be used fluently
-	 */
-	public ElasticSearchAppenderOptions setPrintStream(final PrintStream printStream) {
+	public ElasticSearchAppenderOptions setPort(final int port) {
 		
-		if (printStream == null ) {
-			throw new IllegalArgumentException("printStream must not be null");
-		}
+		this.port = port;
 		
-		this.printStream = printStream;
+		return this;
+		
+	}
+	
+	public ElasticSearchAppenderOptions setIndexNameOrPattern(final String indexNameOrPattern) {
+		
+		this.indexNameOrPattern = indexNameOrPattern;
+		
+		return this;
+		
+	}
+	
+	public ElasticSearchAppenderOptions setType(final String type) {
+		
+		this.type = type;
+		
+		return this;
+		
+	}
+	
+	public ElasticSearchAppenderOptions setIndexMode(final IndexMode indexMode) {
+		
+		this.indexMode = indexMode;
+		
 		return this;
 	}
 	
-
-	public PrintStream getPrintStream() {
+	public ElasticSearchAppenderOptions setFieldNames(final Collection<String> fieldNames) {
 		
-		return printStream;
+		this.fieldNames = fieldNames;
 		
+		return this;
 	}
+	
+	public ElasticSearchAppenderOptions setIndexScheduleInterval(final long indexScheduleInterval) {
+		
+		this.indexScheduleInterval = indexScheduleInterval;
+		
+		return this;
+	}
+
+	public String getHost() {
+		return host;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public IndexMode getIndexMode() {
+		return indexMode;
+	}
+
+	public String getIndexNameOrPattern() {
+		return indexNameOrPattern;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public Collection<String> getFieldNames() {
+		return fieldNames;
+	}
+
+	public long getIndexScheduleInterval() {
+		return indexScheduleInterval;
+	}
+	
+	
+	
 	
 }

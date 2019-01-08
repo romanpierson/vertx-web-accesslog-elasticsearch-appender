@@ -20,9 +20,44 @@ Just add it as a dependency to your project (maven example)
 </dependency>
 ```
 
+## Setup ES Cluster
+
+### Define global index template
+
+```json
+PUT _template/template_accesslog
+{
+  "index_patterns": ["accesslog", "accesslog*"],
+  "settings": {
+    "number_of_shards": 1
+  },
+  "mappings": {
+    "_doc": {
+      "_source": {
+        "enabled": true
+      },
+      "properties": {
+        "method": {
+          "type": "keyword"
+        },
+        "status": {
+          "type": "integer"
+        },
+        "duration": {
+          "type": "integer"
+        },
+        "timestamp": {
+          "type": "date"
+        }
+      }
+    }
+  }
+}
+```
+
 ### Compatibility
 
 Version | Accesslog version | ES version
 ----|------ | ----
-1.0.0 | 1.1.0 | TBD
+1.2.0 | 1.2.0 | TBD
 

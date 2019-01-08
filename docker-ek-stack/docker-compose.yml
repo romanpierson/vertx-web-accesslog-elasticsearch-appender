@@ -1,0 +1,50 @@
+version: '3.0'
+
+services:
+
+  es01:
+    container_name: es01
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    environment:
+      - node.name=es01
+      - cluster.name=accesslog-test-es-cluster
+      - discovery.zen.minimum_master_nodes=2
+      - ELASTIC_PASSWORD=secret 
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes: ['./elasticsearch01/data:/usr/share/elasticsearch/data']
+    ports:
+      - 9200:9200
+    networks:
+      - elk
+      
+  es02:
+    container_name: es02
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    environment:
+      - node.name=es02
+      - cluster.name=accesslog-test-es-cluster
+      - discovery.zen.minimum_master_nodes=2
+      - discovery.zen.ping.unicast.hosts=es01
+      - ELASTIC_PASSWORD=secret 
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes: ['./elasticsearch02/data:/usr/share/elasticsearch/data']
+    ports:
+      - 9201:9200
+    networks:
+      - elk
+      
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:6.5.4
+    ports:
+      - 5601:5601
+    volumes: ['./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro']
+    networks:
+      - elk
+    depends_on:
+      - es01
+      
+networks:
+
+  elk:
+    driver: bridge

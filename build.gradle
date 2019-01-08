@@ -1,11 +1,10 @@
 plugins {
-    id "com.jfrog.bintray" version "1.7.3"
+    id "com.jfrog.bintray" version "1.8.4"
 }
 
 repositories {
     mavenCentral()
     jcenter()
-    mavenLocal()
 }
 
 apply plugin: 'eclipse'
@@ -13,13 +12,20 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
-version='1.0.0'
+version='1.2.0_RC1'
 
 dependencies {
 
-	compile 'com.mdac:vertx-web-accesslog:1.1.0-Beta'
+	compile 'com.mdac:vertx-web-accesslog:1.2.0_RC3'
+	compile 'io.vertx:vertx-web-client:3.6.2'
 	
-	testCompile 'junit:junit:4.11'
+	// Logback (via SLF4J)
+	testRuntime 'ch.qos.logback:logback-classic:1.2.3'
+	
+	// Log4J
+	//testRuntime 'log4j:log4j:1.2.17'
+	
+	testCompile 'junit:junit:4.12'
 	
 }
 
@@ -27,8 +33,8 @@ dependencies {
 sourceCompatibility='1.8'
 targetCompatibility='1.8'
 
-jar.archiveName = "vertx-web-accesslog-elasticsearch-appender-1.0.0.jar"
-bintrayUpload.packageName = "vertx-web-accesslog-elasticsearch-appender-1.0.0.jar"
+jar.archiveName = "vertx-web-accesslog-elasticsearch-appender-1.2.0_RC1.jar"
+bintrayUpload.packageName = "vertx-web-accesslog-elasticsearch-appender-1.2.0_RC1.jar"
 
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
@@ -40,7 +46,7 @@ publishing {
             
             groupId 'com.mdac'
             artifactId 'vertx-web-accesslog-elasticsearch-appender'
-            version '1.0.0'
+            version '1.2.0_RC1'
             
             from components.java
 
@@ -62,18 +68,18 @@ bintray {
         repo = 'maven'
         name = 'com.mdac.vertx-web-accesslog-elasticsearch-appender'
         licenses = ['Apache-2.0']
-        labels = ['vertx', 'log', 'accesslog', 'elasticsearch']
+        labels = ['vertx', 'log', 'accesslog','elasticsearch']
         publicDownloadNumbers = true
         //Optional version descriptor
         override = false
         vcsUrl = 'https://github.com/romanpierson/vertx-web-accesslog-elasticsearch-appender.git'
         version {
-        	name = '1.0.0'
+        	name = '1.2.0_RC1'
         }
     }
 }
 
-task wrapper(type: Wrapper) {
-  gradleVersion = '4.0'
+wrapper() {
+  gradleVersion = '5.0'
 }
 
