@@ -14,7 +14,7 @@ package com.mdac.vertx.web.accesslogger.appender.elasticsearch.impl;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +42,7 @@ public class ElasticSearchAppender extends AbstractVerticle {
 
 	private ElasticSearchAppenderOptions appenderOptions;
 	
+	private WebClient client;
 	private HttpRequest<Buffer> request;
 	private final String newLine = "\n";
 	private String cachedStaticIndexPrefix;
@@ -95,14 +96,14 @@ public class ElasticSearchAppender extends AbstractVerticle {
 		final Collection<JsonArray> drainedValues = new ArrayList<>(currentSize);
 
 		this.queue.drainTo(drainedValues, currentSize);
-
+		
 		request
 		  .sendBuffer(Buffer.buffer(getIndexString(drainedValues)), ar -> {
 		    if (ar.succeeded()) {
 		     
 		    	JsonObject response = ar.result().bodyAsJsonObject();
 		    	
-		    	if(response == null || response.getBoolean("errors")) {
+		    	if(response == null || response.getBoolean("errors", true)) {
 		    		handleError(drainedValues, null);
 		    	}
 		    	
@@ -119,7 +120,7 @@ public class ElasticSearchAppender extends AbstractVerticle {
 		if (throwable != null) {
 			LOG.warn("Failed to index [{}] values", events.size(), throwable);
 		} else {
-			LOG.warn("Failed to index [{}] values");
+			LOG.warn("Failed to index [{}] values", events.size());
 		}
 		
 	}
@@ -128,12 +129,20 @@ public class ElasticSearchAppender extends AbstractVerticle {
 		
 		WebClientOptions options = new WebClientOptions();
 		options.setKeepAlive(true);
+		options.setTrustAll(this.appenderOptions.isSslTrustAll());
 		
-		WebClient client = WebClient.create(vertx, options);
-		this.request = client.post(this.appenderOptions.getPort(), this.appenderOptions.getHost(), "/_bulk");
+		this.client = WebClient.create(vertx, options);
+		
+		this.request = this.client.post(this.appenderOptions.getPort(), this.appenderOptions.getHost(), "/_bulk");
 		this.request.putHeader("content-type", "application/json");
+		this.request.ssl(this.appenderOptions.isSSL());
 		
-		LOG.info("Initialized WebClient for [{}:{}]", this.appenderOptions.getHost(), this.appenderOptions.getPort());
+		if(this.appenderOptions.isSSL()) {
+			String base64key = Base64.getEncoder().encodeToString(new StringBuilder("elastic").append(":").append("PleaseChangeMe").toString().getBytes());
+			this.request.putHeader("authorization", "Basic " + base64key);
+		}
+		
+		LOG.info("Initialized WebClient for [{}:{}] using SSL[{}] and trustAll[{}]", this.appenderOptions.getHost(), this.appenderOptions.getPort(), this.appenderOptions.isSSL(), this.appenderOptions.isSslTrustAll());
 		
 	}
 	
@@ -229,6 +238,11 @@ public class ElasticSearchAppender extends AbstractVerticle {
 			
 			LOG.info("No items left in queue");
 			
+		}
+		
+		LOG.info("Stopping Web Client");
+		if(this.client != null) {
+			this.client.close();
 		}
 		
 		super.stop();

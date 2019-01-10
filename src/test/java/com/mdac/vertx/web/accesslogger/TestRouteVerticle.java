@@ -42,13 +42,6 @@ public class TestRouteVerticle extends AbstractVerticle {
 		//System.setProperty("access.location", "/tmp/accesslog ");
 		System.setProperty("access.location", "/Users/romanpierson/Documents/workspaces/github_romanpierson/vertx-web-accesslog-logging-appender/accesslog ");
 		
-		
-		// Log4J Native
-		// System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.Log4jLogDelegateFactory");
-		
-		// Log4J2 Native
-		//System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.Log4j2LogDelegateFactory");
-		
 		final Vertx vertx = Vertx.vertx();
 		vertx.deployVerticle(new TestRouteVerticle());
 
@@ -70,14 +63,16 @@ public class TestRouteVerticle extends AbstractVerticle {
 				// Example how to specify a pattern and an explicit appender
 				.handler(AccessLoggerHandler.create(new AccessLoggerOptions().setPattern("%{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}t %m %s %D cs-uri"), 
 					                        Arrays.asList(
-					                        		new ElasticSearchAppenderOptions()
-					                        			.setHost("localhost")
-					                        			.setPort(9201)
-					                        			.setIndexScheduleInterval(1000L)
-					                        			.setFieldNames(Arrays.asList("timestamp", "method", "status", "duration", "uri"))
-					                        			.setIndexMode(IndexMode.DATE_PATTERN)
-					                        			.setIndexNameOrPattern("accesslog-yyyy-MM-dd")
-					                        		)
+				                        		new ElasticSearchAppenderOptions()
+				                        			.setHost("localhost")
+				                        			.setPort(9200)
+				                        			//.setSSL(true, "elastic", "PleaseChangeMe")
+				                        			.setIndexScheduleInterval(5000L)
+				                        			.setFieldNames(Arrays.asList("timestamp", "method", "status", "duration", "uri"))
+				                        			.setIndexMode(IndexMode.DATE_PATTERN)
+				                        			.setIndexNameOrPattern("accesslog-yyyy-MM-dd")
+				                        		)
+					                        
 					                        )
 				);
 		

@@ -25,6 +25,11 @@ public class ElasticSearchAppenderOptions extends AppenderOptions {
 	private String type = "_doc";
 	private long indexScheduleInterval = 5000L;
 	
+	private boolean isSSL = false;
+	private boolean sslTrustAll = false;
+	private String basicAuthenticationUser;
+	private String basicAuthenticationPassword;
+	
 	private Collection<String> fieldNames;
 	
 	public enum IndexMode{
@@ -51,6 +56,17 @@ public class ElasticSearchAppenderOptions extends AppenderOptions {
 	public ElasticSearchAppenderOptions setPort(final int port) {
 		
 		this.port = port;
+		
+		return this;
+		
+	}
+	
+	public ElasticSearchAppenderOptions setSSL(final boolean sslTrustAll, final String basicAuthenticationUser, final String basicAuthenticationPassword) {
+		
+		this.isSSL = true;
+		this.sslTrustAll = sslTrustAll;
+		this.basicAuthenticationUser = basicAuthenticationUser;
+		this.basicAuthenticationPassword = basicAuthenticationPassword;
 		
 		return this;
 		
@@ -120,6 +136,24 @@ public class ElasticSearchAppenderOptions extends AppenderOptions {
 	public long getIndexScheduleInterval() {
 		return indexScheduleInterval;
 	}
+
+	public boolean isSSL() {
+		return isSSL;
+	}
+
+	public boolean isSslTrustAll() {
+		return sslTrustAll;
+	}
+
+	public String getBasicAuthenticationUser() {
+		return basicAuthenticationUser;
+	}
+
+	public String getBasicAuthenticationPassword() {
+		return basicAuthenticationPassword;
+	}
+	
+	
 	
 	
 	
