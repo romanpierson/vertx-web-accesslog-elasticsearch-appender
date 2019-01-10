@@ -2,7 +2,7 @@
 
 # vertx-web-accesslog-elasticsearch-appender
 
-An appender implementation to be used with [vertx-web-accesslog] (https://github.com/romanpierson/vertx-web-accesslog).
+An appender implementation to be used with [vertx-web-accesslog](https://github.com/romanpierson/vertx-web-accesslog).
 
 Writes its data to an elasticsearch instance.
 
@@ -15,7 +15,7 @@ Just add it as a dependency to your project (gradle example)
 
 ```xml
 dependencies {
-	compile 'vertx-web-accesslog-elasticsearch-appender:1.2.0'
+	compile 'com.mdac:vertx-web-accesslog-elasticsearch-appender:1.2.0'
 }
 ```
 
