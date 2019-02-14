@@ -60,7 +60,7 @@ As for each field to be indexed a specific name needs to be used this has to be 
 
 ## Changelog
 
-### 1.3.0 (2019-02-10)
+### 1.3.0 (2019-02-14)
 
 * Initial version
 
