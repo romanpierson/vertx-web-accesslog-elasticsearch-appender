@@ -12,199 +12,59 @@
  */
 package com.mdac.vertx.web.accesslogger.appender.elasticsearch.impl;
 
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
-import com.mdac.vertx.web.accesslogger.AccessLoggerConstants;
-import com.mdac.vertx.web.accesslogger.appender.elasticsearch.impl.ElasticSearchAppenderOptions.IndexMode;
+import com.mdac.vertx.elasticsearch.indexer.ElasticSearchIndexerConstants;
+import com.mdac.vertx.elasticsearch.indexer.ElasticSearchIndexerConstants.Message.Structure.Field;
+import com.mdac.vertx.elasticsearch.indexer.verticle.ElasticSearchIndexerVerticle;
+import com.mdac.vertx.web.accesslogger.appender.Appender;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.buffer.Buffer;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 
-public class ElasticSearchAppender extends AbstractVerticle {
+/**
+ * 
+ * An implementation of {@link Appender} that writes to {@link ElasticSearchIndexerVerticle}
+ * 
+ * @author Roman Pierson
+ *
+ */
+public class ElasticSearchAppender implements Appender {
 
 	private final Logger LOG = LoggerFactory.getLogger(this.getClass().getName());
 	
-	private BlockingQueue<JsonArray> queue = new LinkedBlockingQueue<>();
+	private static final String CONFIG_KEY_INSTANCE_IDENTIFER = "instanceIdentifier";
+	private static final String CONFIG_KEY_TIMESTAMP_POSITION = "timestampPosition";
+	private static final String CONFIG_KEY_FIELD_NAMES = "fieldNames";
 
-	private ElasticSearchAppenderOptions appenderOptions;
+	private final EventBus vertxEventBus;
 	
-	private WebClient client;
-	private HttpRequest<Buffer> request;
-	private final String newLine = "\n";
-	private String cachedStaticIndexPrefix;
-	private Map<String, String> cachedDynamicIndexPrefix = new HashMap<>();
-	private Collection<String> fieldNames;
+	private final int timestampPosition;
+	private final String instanceIdentifier;
+	private final Collection<String> fieldNames;
 	
-	public ElasticSearchAppender(final ElasticSearchAppenderOptions appenderOptions){
+	@SuppressWarnings("unchecked")
+	public ElasticSearchAppender(final JsonObject config){
 		
-		if(appenderOptions == null){
-			throw new IllegalArgumentException("appenderOptions must not be null");
+		if(config == null){
+			throw new IllegalArgumentException("config must not be null");
+		} else if (config.getString(CONFIG_KEY_INSTANCE_IDENTIFER, "").trim().length() == 0) {
+			throw new IllegalArgumentException(CONFIG_KEY_INSTANCE_IDENTIFER + " must not be empty");
+		} else if (config.getJsonArray(CONFIG_KEY_FIELD_NAMES, new JsonArray()).isEmpty()) {
+			throw new IllegalArgumentException(CONFIG_KEY_FIELD_NAMES + " must not be empty");
 		}
 		
-		this.appenderOptions = appenderOptions;
-		this.fieldNames = appenderOptions.getFieldNames();
-	}
-	
-	@Override
-	public void start() throws Exception {
-
-		super.start();
-
-		LOG.info("Starting ElasticSearchAppender Verticle");
+		this.vertxEventBus = Vertx.currentContext().owner().eventBus();
 		
-		vertx.eventBus().<JsonArray> consumer(AccessLoggerConstants.EVENTBUS_APPENDER_EVENT_NAME, event -> {
-			
-			try {
-				this.queue.put(event.body());
-			}catch(Exception ex) {
-				LOG.error("Error when trying to add event to queue", ex);
-			}
-			
-		});
+		this.timestampPosition = config.getInteger(CONFIG_KEY_TIMESTAMP_POSITION, 0);
+		this.instanceIdentifier = config.getString(CONFIG_KEY_INSTANCE_IDENTIFER);
+		this.fieldNames = config.getJsonArray(CONFIG_KEY_FIELD_NAMES).getList();
 		
-		initializeClient();
-		
-		vertx.setPeriodic(this.appenderOptions.getIndexScheduleInterval(), handler -> {
-
-			if (!this.queue.isEmpty()) {
-
-				indexCurrentData();
-				
-			}
-		});
-
-	}
-
-	private void indexCurrentData() {
-		
-		final int currentSize = this.queue.size();
-		
-		final Collection<JsonArray> drainedValues = new ArrayList<>(currentSize);
-
-		this.queue.drainTo(drainedValues, currentSize);
-		
-		request
-		  .sendBuffer(Buffer.buffer(getIndexString(drainedValues)), ar -> {
-		    if (ar.succeeded()) {
-		     
-		    	JsonObject response = ar.result().bodyAsJsonObject();
-		    	
-		    	if(response == null || response.getBoolean("errors", true)) {
-		    		handleError(drainedValues, null);
-		    	}
-		    	
-		    } else {
-		    	
-		    	handleError(drainedValues, ar.cause());
-		    	
-		    }
-		  });
-	}
-	
-	private void handleError(Collection<JsonArray> events, Throwable throwable ) {
-	
-		if (throwable != null) {
-			LOG.warn("Failed to index [{}] values", events.size(), throwable);
-		} else {
-			LOG.warn("Failed to index [{}] values", events.size());
-		}
-		
-	}
-	
-	private void initializeClient() {
-		
-		WebClientOptions options = new WebClientOptions();
-		options.setKeepAlive(true);
-		options.setTrustAll(this.appenderOptions.isSslTrustAll());
-		
-		this.client = WebClient.create(vertx, options);
-		
-		this.request = this.client.post(this.appenderOptions.getPort(), this.appenderOptions.getHost(), "/_bulk");
-		this.request.putHeader("content-type", "application/json");
-		this.request.ssl(this.appenderOptions.isSSL());
-		
-		if(this.appenderOptions.isSSL()) {
-			String base64key = Base64.getEncoder().encodeToString(new StringBuilder("elastic").append(":").append("PleaseChangeMe").toString().getBytes());
-			this.request.putHeader("authorization", "Basic " + base64key);
-		}
-		
-		LOG.info("Initialized WebClient for [{}:{}] using SSL[{}] and trustAll[{}]", this.appenderOptions.getHost(), this.appenderOptions.getPort(), this.appenderOptions.isSSL(), this.appenderOptions.isSslTrustAll());
-		
-	}
-	
-	private String getIndexPrefixString(final String timestamp) {
-		
-		if(IndexMode.DATE_PATTERN.equals(this.appenderOptions.getIndexMode())) {
-		
-			final String cacheKey = timestamp.substring(0, 10);
-			
-			if(!this.cachedDynamicIndexPrefix.containsKey(cacheKey)) {
-				
-				ZonedDateTime tsDateTime = ZonedDateTime.parse(timestamp);
-				// Explicitly not using a DateTimeFormatter as this would require escaping the whole pattern
-				String formattedIndexPattern = this.appenderOptions.getIndexNameOrPattern()
-													.replaceAll("yyyy", String.format("%04d", tsDateTime.getYear()))
-													.replaceAll("MM", String.format("%02d", tsDateTime.getMonthValue()))
-													.replaceAll("dd", String.format("%02d", tsDateTime.getDayOfMonth()));
-				
-				String formattedIndexPrefix = String.format("{ \"index\" : { \"_index\" : \"%s\", \"_type\" : \"%s\" } }%s",  formattedIndexPattern, this.appenderOptions.getType(), this.newLine);
-				
-				this.cachedDynamicIndexPrefix.put(cacheKey, formattedIndexPrefix);
-				
-			}
-			
-			return this.cachedDynamicIndexPrefix.get(cacheKey);
-			
-		} else {
-			
-			if(this.cachedStaticIndexPrefix == null) {
-				
-				this.cachedStaticIndexPrefix = String.format("{ \"index\" : { \"_index\" : \"%s\", \"_type\" : \"%s\" } }%s",  this.appenderOptions.getIndexNameOrPattern(), this.appenderOptions.getType(), this.newLine);
-				
-			}
-			
-			return this.cachedStaticIndexPrefix;
-		}
-		
-	}
-	
-	private String getIndexString(final Collection<JsonArray> values) {
-		
-		StringBuilder sb = new StringBuilder();
-		
-		for(JsonArray value : values) {
-			
-			String [] parameterValues = getParameterValues(value);
-			
-			sb.append(getIndexPrefixString(parameterValues[0]));
-			
-			JsonObject jsonValue = new JsonObject();
-			
-			int i = 0;
-			for(String fieldName : fieldNames) {
-				jsonValue.put(fieldName, parameterValues[i]);
-				i++;
-			}
-			
-			sb.append(jsonValue.encode()).append(newLine);
-			
-		}
-		
-		return sb.toString();
+		LOG.info("Created ElasticSearchAppender with {} [{}], {} [{}], {} {}", CONFIG_KEY_INSTANCE_IDENTIFER, this.instanceIdentifier, CONFIG_KEY_TIMESTAMP_POSITION, this.timestampPosition, CONFIG_KEY_FIELD_NAMES, this.fieldNames);
 	}
 	
 	private String[] getParameterValues(final JsonArray values){
@@ -220,34 +80,35 @@ public class ElasticSearchAppender extends AbstractVerticle {
 		return parameterValues;
 		
 	}
-	
+
 	@Override
-	public void stop() throws Exception {
-
-		LOG.info("Stopping ElasticSearchAppender Verticle");
-
-		if(!this.queue.isEmpty()) {
-			
-			LOG.info("Starting to drain queue with [{}] items left to ElasticSearch", this.queue.size());
-			
-			indexCurrentData();
-			
-			LOG.info("Finished queue draining");
-			
-		} else {
-			
-			LOG.info("No items left in queue");
-			
-		}
+	public void push(final JsonArray accessEvent) {
 		
-		LOG.info("Stopping Web Client");
-		if(this.client != null) {
-			this.client.close();
-		}
-		
-		super.stop();
-
+		final long metaTimestamp = this.timestampPosition < 0 ? System.currentTimeMillis() : Long.parseLong(accessEvent.getString(this.timestampPosition));
+			
+			// Just send the accesslog event to the indexer
+			JsonObject jsonMeta = new JsonObject();
+			jsonMeta.put(Field.TIMESTAMP.getFieldName(), metaTimestamp);
+			jsonMeta.put(Field.INSTANCE_IDENTIFIER.getFieldName(), this.instanceIdentifier);
+			
+			JsonObject jsonMessage = new JsonObject();
+			
+			String [] parameterValues = getParameterValues(accessEvent);
+			
+			int i = 0;
+			for(String fieldName : fieldNames) {
+				if(this.timestampPosition != i) {
+					jsonMessage.put(fieldName, parameterValues[i]);
+				}
+				i++;
+			}
+			
+			JsonObject json = new JsonObject()
+					.put(Field.META.getFieldName(), jsonMeta)
+					.put(Field.MESSAGE.getFieldName(), jsonMessage);
+			
+			this.vertxEventBus.send(ElasticSearchIndexerConstants.EVENTBUS_EVENT_NAME,  json);
+			
 	}
-
 	
 }
