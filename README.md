@@ -14,7 +14,7 @@ Just add it as a dependency to your project (gradle example)
 
 ```xml
 dependencies {
-	compile 'com.mdac:vertx-web-accesslog-elasticsearch-appender:1.3.0'
+	compile 'com.mdac:vertx-web-accesslog-elasticsearch-appender:1.4.0_RC1'
 }
 ```
 
@@ -64,4 +64,6 @@ As for each field to be indexed a specific name needs to be used this has to be 
 
 * Initial version
 
+### 1.4.0_RC1 (2019-07-28)
 
+* Upgrade to Vertx 4
