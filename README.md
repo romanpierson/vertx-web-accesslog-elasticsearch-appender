@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/romanpierson/vertx-web-accesslog-elasticsearch-appender.svg?branch=master)](https://travis-ci.org/romanpierson/vertx-web-accesslog-elasticsearch-appender) 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=romanpierson_vertx-web-accesslog-elasticsearch-appender&metric=coverage)](https://sonarcloud.io/dashboard?id=romanpierson_vertx-web-accesslog-elasticsearch-appender)
-![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)
+## THIS PROJECT IS DEPRECATED AND DISCONTINUED
+
+Its functionality is integrated now as part of [vertx-web-accesslog](https://github.com/romanpierson/vertx-web-accesslog)
 
 # vertx-web-accesslog-elasticsearch-appender
 
